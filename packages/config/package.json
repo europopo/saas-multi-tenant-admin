@@ -1,0 +1,10 @@
+{
+  "name": "@saas/config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "公共 ESLint、TS、Tailwind 等工程配置",
+  "exports": {
+    "./tailwind": "./tailwind.config.ts",
+    "./postcss": "./postcss.config.ts"
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "@saas/api-client",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Alova 请求实例及通用请求能力",
+  "exports": {
+    ".": "./src/index.ts",
+    "./client": "./src/client.ts",
+    "./interceptors": "./src/interceptors.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@saas/shared": "workspace:*",
+    "alova": "^3.5.5",
+    "@alova/mock": "^2.0.22"
+  }
+}

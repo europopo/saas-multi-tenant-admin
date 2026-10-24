@@ -1,0 +1,20 @@
+{
+  "name": "@saas/layouts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "通用布局组件",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@saas/shared": "workspace:*",
+    "@saas/ui": "workspace:*",
+    "vue": "^3.5.13",
+    "vue-router": "^4.5.0",
+    "element-plus": "^2.9.0"
+  }
+}

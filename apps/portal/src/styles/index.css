@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+/* 侧边栏菜单样式（深色） */
+.el-menu {
+  border-right: none !important;
+}
+
+.sidebar-dark.el-menu {
+  background: transparent;
+}
+
+.sidebar-dark .el-menu-item,
+.sidebar-dark .el-sub-menu__title {
+  color: #9ca3af;
+}
+
+.sidebar-dark .el-menu-item:hover,
+.sidebar-dark .el-sub-menu__title:hover {
+  background: #374151;
+  color: #f9fafb;
+}
+
+.sidebar-dark .el-menu-item.is-active {
+  background: #2563eb;
+  color: #f9fafb;
+}
+
+/* 子菜单内层背景（深色下展开的子项） */
+.sidebar-dark .el-menu--inline {
+  background: #111827;
+}
+
+.sidebar-dark .el-menu--inline .el-menu-item {
+  color: #9ca3af;
+}
+
+.sidebar-dark .el-menu--inline .el-menu-item:hover {
+  background: #374151;
+  color: #f9fafb;
+}
+
+.sidebar-dark .el-menu--inline .el-menu-item.is-active {
+  background: #2563eb;
+  color: #f9fafb;
+}
+
+/* 折叠时的弹出菜单保持深色 */
+.sidebar-dark .el-menu--vertical {
+  background: #1f2937;
+}
+
+/* 滚动条 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
+}
+
+/* ============ 深色主题覆盖 ============ */
+/* 通过 html.dark 控制，配合 Tailwind darkMode: 'class' */
+html.dark body {
+  color: #e5e7eb;
+  background-color: #0f172a;
+}
+
+/* 页面主体背景 */
+html.dark .bg-gray-50 {
+  background-color: #0f172a;
+}
+
+/* 卡片/面板背景反转 */
+html.dark .bg-white {
+  background-color: #1e293b;
+}
+
+/* 文字颜色反转（深色下用浅色文字） */
+html.dark .text-gray-800 {
+  color: #e5e7eb;
+}
+html.dark .text-gray-700 {
+  color: #d1d5db;
+}
+html.dark .text-gray-600 {
+  color: #cbd5e1;
+}
+html.dark .text-gray-500 {
+  color: #9ca3af;
+}
+html.dark .text-gray-400 {
+  color: #94a3b8;
+}
+
+/* 边框颜色 */
+html.dark .border-gray-200 {
+  border-color: #334155;
+}
+html.dark .border-gray-100 {
+  border-color: #1e293b;
+}
+html.dark .border-b {
+  border-color: #334155;
+}
+
+/* 分隔线 */
+html.dark .bg-gray-200 {
+  background-color: #334155;
+}
+
+/* hover 背景 */
+html.dark .hover\:bg-gray-50:hover {
+  background-color: #334155;
+}
+
+/* 顶栏与面包屑条 */
+html.dark header {
+  background-color: #1e293b;
+  border-color: #334155;
+}
+
+/* 侧边栏保持深色不变（原本就是深色） */
+
+/* Element Plus 弹窗/表格/输入框等在 dark 下由 css-vars 处理 */
+

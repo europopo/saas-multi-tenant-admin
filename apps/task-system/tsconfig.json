@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["node"],
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@saas/shared": ["../../packages/shared/src/index.ts"],
+      "@saas/api-client": ["../../packages/api-client/src/index.ts"],
+      "@saas/mock": ["../../packages/mock/src/index.ts"],
+      "@saas/ui": ["../../packages/ui/src/index.ts"],
+      "@saas/layouts": ["../../packages/layouts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "vite.config.ts"]
+}

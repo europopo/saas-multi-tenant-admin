@@ -1,0 +1,48 @@
+{
+  "name": "saas-platform",
+  "version": "1.0.0",
+  "private": true,
+  "description": "基于 Vue 3 的 SaaS 多租户管理平台模板（Monorepo）",
+  "type": "module",
+  "packageManager": "pnpm@10.28.1",
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter \"./apps/**\" dev",
+    "dev:portal": "pnpm --filter @saas/portal dev",
+    "dev:task": "pnpm --filter @saas/task-system dev",
+    "build": "pnpm -r --filter \"./apps/**\" build",
+    "build:portal": "pnpm --filter @saas/portal build",
+    "build:task": "pnpm --filter @saas/task-system build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "eslint . --ext .ts,.vue --fix",
+    "lint:check": "eslint . --ext .ts,.vue",
+    "format": "prettier --write \"**/*.{ts,vue,js,json,css,md}\"",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "clean": "pnpm -r exec rm -rf dist node_modules"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^22.20.5",
+    "eslint": "^9.20.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.13.0",
+    "prettier": "^3.5.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^3.2.7",
+    "vue-tsc": "^2.2.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "vue-demi",
+      "@parcel/watcher"
+    ]
+  }
+}
