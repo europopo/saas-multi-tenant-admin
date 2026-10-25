@@ -56,7 +56,8 @@ const routes: RouteRecordRaw[] = [
 ];
 
 const router = createRouter({
-  history: createWebHistory(),
+  // 路由 base 与 vite build.base 保持一致，支持子目录部署
+  history: createWebHistory(import.meta.env.VITE_APP_BASE || '/'),
   routes,
 });
 

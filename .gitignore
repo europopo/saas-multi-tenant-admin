@@ -5,10 +5,15 @@ node_modules
 dist
 dist-ssr
 
-# 本地环境
+# 本地环境（真实密钥/本地私有配置一律忽略）
 *.local
 .env
-.env.*
+.env.*.local
+
+# 允许进版本库的模板与测试配置（不含敏感信息）
+!.env.example
+!.env.test
+!.env.development
 
 # 系统/编辑器
 .DS_Store

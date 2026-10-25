@@ -16,6 +16,7 @@
     "build": "pnpm -r --filter \"./apps/**\" build",
     "build:portal": "pnpm --filter @saas/portal build",
     "build:task": "pnpm --filter @saas/task-system build",
+    "build:iis": "node scripts/build-iis.cjs",
     "typecheck": "pnpm -r typecheck",
     "lint": "eslint . --ext .ts,.vue --fix",
     "lint:check": "eslint . --ext .ts,.vue",

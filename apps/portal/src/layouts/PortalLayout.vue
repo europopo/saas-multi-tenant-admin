@@ -132,12 +132,15 @@ function handleSelectSubsystem(sub: Subsystem) {
     ElMessage.info(`「${sub.name}」已停用`);
     return;
   }
-  // 任务管理子系统为独立应用，跳转到其入口，并通过 URL 携带登录态实现跨端口单点登录
+  // 任务管理子系统为独立应用，跳转到其入口，并通过 URL 携带登录态实现跨应用单点登录
   if (sub.code === 'task-system') {
     const token = auth.token ?? '';
     const user = auth.user ? encodeURIComponent(JSON.stringify(auth.user)) : '';
     const query = `token=${encodeURIComponent(token)}&user=${user}`;
-    window.location.href = `http://${window.location.hostname}:5174/task?${query}`;
+    // 任务子系统入口地址可通过 VITE_TASK_URL 配置（如 http://host/task/），
+    // 未配置时回退到同主机 5174 端口的开发地址。
+    const taskBase = import.meta.env.VITE_TASK_URL || `http://${window.location.hostname}:5174`;
+    window.location.href = `${taskBase}/task?${query}`;
     return;
   }
   // 动态路由：任意子系统（含新增）统一跳转到 /subsystem/:code

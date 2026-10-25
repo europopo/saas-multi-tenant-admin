@@ -51,7 +51,10 @@ function handleSelectSubsystem(sub: Subsystem) {
     const token = auth.token ?? '';
     const user = auth.user ? encodeURIComponent(JSON.stringify(auth.user)) : '';
     const query = `token=${encodeURIComponent(token)}&user=${user}`;
-    window.location.href = `http://${window.location.hostname}:5173/?${query}`;
+    // 门户入口地址可通过 VITE_PORTAL_URL 配置（如 http://host/portal/），
+    // 未配置时回退到同主机 5173 端口的开发地址。
+    const portalBase = import.meta.env.VITE_PORTAL_URL || `http://${window.location.hostname}:5173`;
+    window.location.href = `${portalBase}/?${query}`;
     return;
   }
   if (sub.status !== 'active') {
