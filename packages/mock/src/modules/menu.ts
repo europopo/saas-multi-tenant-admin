@@ -93,6 +93,7 @@ export default defineMock({
       visible: body.visible ?? true,
       status: body.status ?? 'active',
       subsystemCode: body.subsystemCode ?? 'portal',
+      scope: body.scope ?? 'common',
       keepAlive: body.keepAlive ?? false,
     };
     db.menus.push(menu);

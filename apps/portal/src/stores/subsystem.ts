@@ -6,6 +6,7 @@ import { defineStore } from 'pinia';
 import { ref } from 'vue';
 import type { Subsystem } from '@saas/shared';
 import { subsystemApi } from '@/api';
+import { useAuthStore } from '@/stores/auth';
 
 export const useSubsystemStore = defineStore('subsystem', () => {
   const subsystems = ref<Subsystem[]>([]);
@@ -14,7 +15,9 @@ export const useSubsystemStore = defineStore('subsystem', () => {
   async function loadSubsystems(force = false) {
     if (loaded.value && !force) return;
     try {
-      subsystems.value = await subsystemApi.list().send();
+      const auth = useAuthStore();
+      // 按当前用户角色过滤子系统可见性（平台级返回全部）
+      subsystems.value = await subsystemApi.list(auth.user?.id).send();
       loaded.value = true;
     } catch {
       // 忽略加载失败，保持空列表

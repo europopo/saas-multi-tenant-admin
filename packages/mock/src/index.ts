@@ -11,3 +11,5 @@ export * from './modules/menu';
 export * from './modules/task';
 export * from './modules/dashboard';
 export * from './modules/sso';
+export * from './modules/dict';
+export * from './modules/message';

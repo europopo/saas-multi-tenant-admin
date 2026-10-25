@@ -2,23 +2,38 @@
  * 租户领域 Mock 接口
  */
 import { defineMock } from '@alova/mock';
-import type { Tenant, TenantQuery, PageResult } from '@saas/shared';
+import type { Tenant, TenantQuery, PageResult, Role, UserInfo } from '@saas/shared';
 import { RESPONSE, BUSINESS_CODE, generateId, paginate } from '@saas/shared';
-import { db } from '../db';
+import { db, resolveUserAuth, buildTenantAdminPermissions } from '../db';
 
 export default defineMock({
-  /** 租户列表（分页 + 搜索 + 筛选） */
+  /**
+   * 租户列表（分页 + 搜索 + 筛选 + 权限域数据隔离）。
+   * 传入 userId 时，租户级用户仅能看到自己所属租户（行级数据隔离）；
+   * 平台级用户或未传 userId 时返回全部租户。
+   */
   '/tenant/list': ({ query }) => {
     const q = query as unknown as TenantQuery & Record<string, string>;
     const keyword = (q.keyword ?? '').trim();
     const status = q.status ?? '';
-    const planId = q.planId ?? '';
     const page = Number(q.page) || 1;
     const pageSize = Number(q.pageSize) || 10;
 
     let list = [...db.tenants].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
+
+    // 权限域数据隔离：租户级用户只返回本租户
+    const userId = q.userId;
+    if (userId) {
+      const user = db.users.find((u) => u.id === userId);
+      if (user) {
+        const resolved = resolveUserAuth(user);
+        if (resolved.scope === 'tenant') {
+          list = list.filter((t) => t.id === user.tenantId);
+        }
+      }
+    }
 
     if (keyword) {
       const k = keyword.toLowerCase();
@@ -30,7 +45,6 @@ export default defineMock({
       );
     }
     if (status) list = list.filter((t) => t.status === status);
-    if (planId) list = list.filter((t) => t.planId === planId);
 
     const result = paginate(list, page, pageSize);
     return RESPONSE.success<PageResult<Tenant>>({
@@ -45,13 +59,18 @@ export default defineMock({
   '/tenant/{id}': ({ params }) => {
     const tenant = db.tenants.find((t) => t.id === params.id);
     if (!tenant) return RESPONSE.error('租户不存在', BUSINESS_CODE.NOT_FOUND);
-    const plan = db.plans.find((p) => p.id === tenant.planId);
-    return RESPONSE.success<Tenant>({ ...tenant, planName: plan?.name });
+    return RESPONSE.success<Tenant>(tenant);
   },
 
-  /** 创建租户 */
+  /**
+   * 创建租户（一键开通）：
+   * 1. 创建租户（subsystemIds 来自表单勾选）
+   * 2. 自动创建 TENANT_ADMIN 角色（scope=tenant, tenantId=新租户id，权限=已选子系统菜单 + portal dashboard）
+   * 3. 自动创建租户管理员用户（username = `${code}-admin`，默认密码 admin123）
+   * 4. 回写 userCount=1
+   */
   '[POST]/tenant/create': ({ data }) => {
-    const body = data as Partial<Tenant>;
+    const body = data as Partial<Tenant> & { adminUsername?: string; adminPassword?: string };
     if (!body.name || !body.code) {
       return RESPONSE.error('租户名称和唯一标识不能为空', BUSINESS_CODE.VALIDATION_ERROR);
     }
@@ -63,7 +82,6 @@ export default defineMock({
       name: body.name,
       code: body.code,
       status: body.status ?? 'active',
-      planId: body.planId ?? 'plan-free',
       contact: body.contact ?? '',
       email: body.email ?? '',
       subsystemIds: body.subsystemIds ?? [],
@@ -72,7 +90,51 @@ export default defineMock({
       userCount: 0,
     };
     db.tenants.unshift(tenant);
-    return RESPONSE.success<Tenant>(tenant, '创建成功');
+
+    // 一键开通：自动创建租户管理员角色
+    const adminPerms = buildTenantAdminPermissions(tenant.subsystemIds);
+    const adminRole: Role = {
+      id: generateId('role'),
+      code: 'tenant_admin',
+      name: '租户管理员',
+      description: `租户「${tenant.name}」自动开通的管理员角色`,
+      scope: 'tenant',
+      tenantId: tenant.id,
+      menuCodes: adminPerms.menuCodes,
+      permissionCodes: adminPerms.permissionCodes,
+      subsystemPermissions: adminPerms.subsystemPermissions,
+      status: 'active',
+      createdAt: new Date().toISOString(),
+    };
+    db.roles.push(adminRole);
+
+    // 一键开通：自动创建租户管理员用户
+    const adminUsername = body.adminUsername?.trim() || `${tenant.code}-admin`;
+    const adminPassword = body.adminPassword?.trim() || 'admin123';
+    if (db.users.some((u) => u.username === adminUsername)) {
+      return RESPONSE.error(`管理员用户名「${adminUsername}」已存在`, BUSINESS_CODE.VALIDATION_ERROR);
+    }
+    const adminUser: UserInfo = {
+      id: generateId('user'),
+      username: adminUsername,
+      nickname: `租户管理员`,
+      avatar: '',
+      email: body.email ?? '',
+      status: 'active',
+      roleIds: [adminRole.id],
+      roles: ['tenant_admin'],
+      permissions: Array.from(
+        new Set([...adminRole.menuCodes, ...adminRole.permissionCodes]),
+      ),
+      tenantId: tenant.id,
+      isPlatformAdmin: false,
+      createdAt: new Date().toISOString(),
+    };
+    db.users.push(adminUser);
+    db.credentials[adminUsername] = adminPassword;
+    tenant.userCount = 1;
+
+    return RESPONSE.success<Tenant>(tenant, `创建成功，租户管理员账号：${adminUsername} / ${adminPassword}`);
   },
 
   /** 更新租户 */

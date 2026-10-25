@@ -2,7 +2,10 @@
 import { reactive, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { ElMessage, type FormInstance, type FormRules } from 'element-plus';
+import { useI18n } from '@saas/ui';
 import { useAuthStore } from '@/stores/auth';
+
+const { t, locale, setLocale } = useI18n();
 
 const auth = useAuthStore();
 const route = useRoute();
@@ -23,6 +26,10 @@ const rules: FormRules = {
     { min: 6, message: '密码至少 6 位', trigger: 'blur' },
   ],
 };
+
+function toggleLocale() {
+  setLocale(locale.value === 'zh-CN' ? 'en-US' : 'zh-CN');
+}
 
 async function handleLogin() {
   if (!formRef.value) return;
@@ -64,12 +71,22 @@ function goSsoLogin() {
         >
           S
         </div>
-        <h1 class="text-2xl font-bold text-gray-800">SaaS 多租户管理平台</h1>
-        <p class="text-sm text-gray-500 mt-1">统一管理租户、子系统与任务</p>
+        <h1 class="text-2xl font-bold text-gray-800">{{ t('portal.login.title') }}</h1>
+        <p class="text-sm text-gray-500 mt-1">{{ t('portal.login.subtitle') }}</p>
       </div>
 
       <div class="bg-white rounded-card shadow-card p-8">
-        <h2 class="text-lg font-semibold text-gray-800 mb-6">账号登录</h2>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-lg font-semibold text-gray-800">{{ t('portal.login.accountLogin') }}</h2>
+          <!-- 语言切换（i18n 架构示范） -->
+          <el-switch
+            :model-value="locale === 'en-US'"
+            active-text="EN"
+            inactive-text="中"
+            inline-prompt
+            @change="toggleLocale"
+          />
+        </div>
         <el-form
           ref="formRef"
           :model="form"
@@ -77,18 +94,18 @@ function goSsoLogin() {
           label-position="top"
           @keyup.enter="handleLogin"
         >
-          <el-form-item label="用户名" prop="username">
-            <el-input v-model="form.username" placeholder="请输入用户名" size="large">
+          <el-form-item :label="t('portal.login.username')" prop="username">
+            <el-input v-model="form.username" :placeholder="t('portal.login.usernamePlaceholder')" size="large">
               <template #prefix
                 ><el-icon><component :is="'User'" /></el-icon
               ></template>
             </el-input>
           </el-form-item>
-          <el-form-item label="密码" prop="password">
+          <el-form-item :label="t('portal.login.password')" prop="password">
             <el-input
               v-model="form.password"
               type="password"
-              placeholder="请输入密码"
+              :placeholder="t('portal.login.passwordPlaceholder')"
               size="large"
               show-password
             >
@@ -104,7 +121,7 @@ function goSsoLogin() {
             :loading="loading"
             @click="handleLogin"
           >
-            登录
+            {{ t('portal.login.loginButton') }}
           </el-button>
         </el-form>
 
@@ -120,12 +137,12 @@ function goSsoLogin() {
           @click="goSsoLogin"
         >
           <el-icon class="mr-1"><Key /></el-icon>
-          企业 SSO 单点登录
+          {{ t('portal.login.ssoButton') }}
         </el-button>
       </div>
 
       <div class="mt-4 bg-white rounded-card shadow-card p-4 text-sm text-gray-500">
-        <div class="font-medium text-gray-700 mb-2">演示账号</div>
+        <div class="font-medium text-gray-700 mb-2">{{ t('portal.login.demoAccount') }}</div>
         <div class="space-y-1.5">
           <div
             class="flex justify-between items-center cursor-pointer hover:bg-gray-50 rounded px-2 py-1"

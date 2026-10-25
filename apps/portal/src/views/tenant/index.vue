@@ -17,7 +17,6 @@ const subsystems = ref<{ id: string; name: string }[]>([]);
 const query = reactive<TenantQuery>({
   keyword: '',
   status: '',
-  planId: '',
   page: 1,
   pageSize: 10,
 });
@@ -35,10 +34,12 @@ const form = reactive({
   name: '',
   code: '',
   status: 'active' as Tenant['status'],
-  planId: 'plan-free',
   contact: '',
   email: '',
   subsystemIds: [] as string[],
+  // 一键开通：租户管理员账号（仅新建时使用）
+  adminUsername: '',
+  adminPassword: 'admin123',
 });
 
 const rules: FormRules = {
@@ -78,7 +79,6 @@ function search() {
 function reset() {
   query.keyword = '';
   query.status = '';
-  query.planId = '';
   query.page = 1;
   load();
 }
@@ -90,10 +90,11 @@ function openCreate() {
     name: '',
     code: '',
     status: 'active',
-    planId: 'plan-free',
     contact: '',
     email: '',
     subsystemIds: [],
+    adminUsername: '',
+    adminPassword: 'admin123',
   });
   dialogVisible.value = true;
 }
@@ -105,10 +106,11 @@ function openEdit(row: Tenant) {
     name: row.name,
     code: row.code,
     status: row.status,
-    planId: row.planId,
     contact: row.contact,
     email: row.email,
     subsystemIds: row.subsystemIds,
+    adminUsername: '',
+    adminPassword: 'admin123',
   });
   dialogVisible.value = true;
 }
@@ -121,7 +123,8 @@ async function submit() {
     try {
       if (dialogMode.value === 'create') {
         await tenantApi.create(form).send();
-        ElMessage.success('创建成功');
+        const adminName = form.adminUsername.trim() || `${form.code}-admin`;
+        ElMessage.success(`创建成功，租户管理员账号：${adminName} / ${form.adminPassword}`);
       } else {
         await tenantApi.update(form).send();
         ElMessage.success('更新成功');
@@ -281,6 +284,17 @@ onMounted(() => {
             <el-option v-for="s in subsystems" :key="s.id" :label="s.name" :value="s.id" />
           </el-select>
         </el-form-item>
+        <template v-if="dialogMode === 'create'">
+          <el-form-item label="管理员账号">
+            <el-input
+              v-model="form.adminUsername"
+              :placeholder="`留空默认 ${form.code || '{code}'}-admin`"
+            />
+          </el-form-item>
+          <el-form-item label="管理员密码">
+            <el-input v-model="form.adminPassword" placeholder="默认 admin123" />
+          </el-form-item>
+        </template>
         <el-form-item label="联系人">
           <el-input v-model="form.contact" />
         </el-form-item>

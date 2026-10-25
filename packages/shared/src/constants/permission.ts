@@ -27,6 +27,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('tenant'),
@@ -40,6 +41,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('tenant-list'),
@@ -54,6 +56,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('tenant-create'),
@@ -65,6 +68,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('tenant-edit'),
@@ -76,6 +80,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('tenant-delete'),
@@ -87,6 +92,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('subsystem'),
@@ -100,6 +106,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('subsystem-list'),
@@ -114,6 +121,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('subsystem-create'),
@@ -125,6 +133,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('subsystem-edit'),
@@ -136,6 +145,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('user'),
@@ -149,6 +159,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('user-list'),
@@ -163,6 +174,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('user-create'),
@@ -174,6 +186,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('user-edit'),
@@ -185,6 +198,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('user-delete'),
@@ -196,6 +210,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('role-list'),
@@ -210,6 +225,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('role-create'),
@@ -221,6 +237,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('role-edit'),
@@ -232,6 +249,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   {
     id: menuId('role-delete'),
@@ -243,6 +261,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'common',
   },
   // 系统管理目录（含菜单管理）
   {
@@ -257,6 +276,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('system-menu'),
@@ -271,6 +291,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('system-menu-create'),
@@ -282,6 +303,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('system-menu-edit'),
@@ -293,6 +315,7 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
   },
   {
     id: menuId('system-menu-delete'),
@@ -304,6 +327,75 @@ export const PORTAL_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'portal',
+    scope: 'platform',
+  },
+  // 数据字典（租户级：租户管理员管理本租户业务枚举，scope=common）
+  {
+    id: menuId('dict'),
+    code: 'dict',
+    name: '数据字典',
+    type: 'menu',
+    parentId: null,
+    path: '/dict',
+    component: 'dict/index',
+    icon: 'Collection',
+    sort: 6,
+    visible: true,
+    status: 'active',
+    subsystemCode: 'portal',
+    scope: 'common',
+  },
+  {
+    id: menuId('dict-create'),
+    code: 'dict:create',
+    name: '新建字典',
+    type: 'button',
+    parentId: menuId('dict'),
+    sort: 2,
+    visible: true,
+    status: 'active',
+    subsystemCode: 'portal',
+    scope: 'common',
+  },
+  {
+    id: menuId('dict-edit'),
+    code: 'dict:edit',
+    name: '编辑字典',
+    type: 'button',
+    parentId: menuId('dict'),
+    sort: 3,
+    visible: true,
+    status: 'active',
+    subsystemCode: 'portal',
+    scope: 'common',
+  },
+  {
+    id: menuId('dict-delete'),
+    code: 'dict:delete',
+    name: '删除字典',
+    type: 'button',
+    parentId: menuId('dict'),
+    sort: 4,
+    visible: true,
+    status: 'active',
+    subsystemCode: 'portal',
+    scope: 'common',
+  },
+  // 站内信（通用：所有登录用户查看自己的通知，scope=common）
+  {
+    id: menuId('notice'),
+    code: 'notice',
+    name: '站内信',
+    type: 'menu',
+    parentId: null,
+    path: '/notice',
+    component: 'notice/index',
+    icon: 'Bell',
+    sort: 7,
+    visible: true,
+    status: 'active',
+    subsystemCode: 'portal',
+    scope: 'common',
   },
 ];
 
@@ -322,6 +414,7 @@ export const TASK_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: menuId('task-list'),
@@ -336,6 +429,7 @@ export const TASK_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: menuId('task-settings'),
@@ -349,6 +443,7 @@ export const TASK_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: menuId('task-third-system'),
@@ -363,6 +458,7 @@ export const TASK_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: menuId('task-task-type'),
@@ -377,6 +473,7 @@ export const TASK_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: menuId('task-base-settings'),
@@ -391,6 +488,7 @@ export const TASK_MENU_SEED: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
 ];
 
@@ -417,6 +515,7 @@ export function buildSubsystemMenuSeed(
       visible: true,
       status: 'active',
       subsystemCode,
+      scope: 'common',
     },
     {
       id: menuId(`${subsystemCode}-list`),
@@ -431,6 +530,7 @@ export function buildSubsystemMenuSeed(
       visible: true,
       status: 'active',
       subsystemCode,
+      scope: 'common',
     },
     {
       id: menuId(`${subsystemCode}-create`),
@@ -442,6 +542,7 @@ export function buildSubsystemMenuSeed(
       visible: true,
       status: 'active',
       subsystemCode,
+      scope: 'common',
     },
     {
       id: menuId(`${subsystemCode}-edit`),
@@ -453,6 +554,7 @@ export function buildSubsystemMenuSeed(
       visible: true,
       status: 'active',
       subsystemCode,
+      scope: 'common',
     },
     {
       id: menuId(`${subsystemCode}-delete`),
@@ -464,6 +566,7 @@ export function buildSubsystemMenuSeed(
       visible: true,
       status: 'active',
       subsystemCode,
+      scope: 'common',
     },
   ];
 }

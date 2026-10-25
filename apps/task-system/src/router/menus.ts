@@ -19,6 +19,7 @@ export const TASK_MENUS: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: 'menu-task-list',
@@ -33,6 +34,7 @@ export const TASK_MENUS: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: 'menu-task-settings',
@@ -46,6 +48,7 @@ export const TASK_MENUS: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: 'menu-task-third-system',
@@ -60,6 +63,7 @@ export const TASK_MENUS: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: 'menu-task-task-type',
@@ -74,6 +78,7 @@ export const TASK_MENUS: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
   {
     id: 'menu-task-base-settings',
@@ -88,5 +93,6 @@ export const TASK_MENUS: MenuItem[] = [
     visible: true,
     status: 'active',
     subsystemCode: 'task-system',
+    scope: 'common',
   },
 ];

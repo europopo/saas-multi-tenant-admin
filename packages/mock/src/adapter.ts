@@ -14,6 +14,8 @@ import menuMock from './modules/menu';
 import taskMock from './modules/task';
 import dashboardMock from './modules/dashboard';
 import ssoMock from './modules/sso';
+import dictMock from './modules/dict';
+import messageMock from './modules/message';
 
 /**
  * 创建 Mock 适配器
@@ -21,7 +23,18 @@ import ssoMock from './modules/sso';
  */
 export function createMockAdapter(enabled = true) {
   return createAlovaMockAdapter(
-    [authMock, tenantMock, subsystemMock, userMock, menuMock, taskMock, dashboardMock, ssoMock],
+    [
+      authMock,
+      tenantMock,
+      subsystemMock,
+      userMock,
+      menuMock,
+      taskMock,
+      dashboardMock,
+      ssoMock,
+      dictMock,
+      messageMock,
+    ],
     {
       enable: enabled,
       httpAdapter: adapterFetch(),

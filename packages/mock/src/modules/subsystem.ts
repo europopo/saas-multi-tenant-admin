@@ -2,48 +2,32 @@
  * 子系统领域 Mock 接口
  */
 import { defineMock } from '@alova/mock';
-import type { Subsystem, PermissionGroup } from '@saas/shared';
-import { RESPONSE, BUSINESS_CODE, generateId, buildMenuTree, buildSubsystemMenuSeed } from '@saas/shared';
-import { db } from '../db';
+import type { Subsystem } from '@saas/shared';
+import { RESPONSE, BUSINESS_CODE, generateId, buildSubsystemMenuSeed } from '@saas/shared';
+import { db, resolveUserAuth } from '../db';
 
 export default defineMock({
-  /** 子系统列表 */
-  '/subsystem/list': () => {
-    return RESPONSE.success<Subsystem[]>(db.subsystems);
-  },
-
   /**
-   * 权限数据源（兼容旧接口）：返回「门户 + 各子系统」的菜单权限树，按子系统分组。
-   * 数据源来自 db.menus（与 /menu/for-role 同源）。
+   * 子系统列表（按当前用户角色过滤可见性）。
+   * 传入 userId 时，按该用户角色的「权限域 + 可访问子系统」过滤；
+   * 不传则返回全部（兼容平台级/无鉴权场景）。
    */
-  '/subsystem/menus': () => {
-    const portalMenus = db.menus.filter((m) => m.subsystemCode === 'portal');
-    const groups: PermissionGroup[] = [
-      { subsystemCode: 'portal', name: '门户', icon: 'HomeFilled', menus: buildMenuTree(portalMenus) },
-    ];
-    for (const sub of db.subsystems) {
-      const menus = db.menus.filter((m) => m.subsystemCode === sub.code);
-      if (menus.length) {
-        groups.push({
-          subsystemCode: sub.code,
-          name: sub.name,
-          icon: sub.icon,
-          menus: buildMenuTree(menus),
-        });
+  '/subsystem/list': ({ query }) => {
+    const userId = (query as { userId?: string }).userId;
+    if (userId) {
+      const user = db.users.find((u) => u.id === userId);
+      if (user) {
+        const resolved = resolveUserAuth(user);
+        if (resolved.scope === 'platform') {
+          return RESPONSE.success<Subsystem[]>(db.subsystems);
+        }
+        const allowed = new Set(resolved.accessibleSubsystems ?? []);
+        // 门户自身始终可见；其余按角色授权过滤
+        const list = db.subsystems.filter((s) => s.code === 'portal' || allowed.has(s.code));
+        return RESPONSE.success<Subsystem[]>(list);
       }
     }
-    return RESPONSE.success<PermissionGroup[]>(groups);
-  },
-
-  /** 当前租户可访问的子系统（根据租户授权关系过滤） */
-  '/subsystem/accessible': ({ query }) => {
-    const tenantId = (query as { tenantId?: string }).tenantId;
-    const tenant = db.tenants.find((t) => t.id === tenantId);
-    if (!tenant) return RESPONSE.success<Subsystem[]>([]);
-    const list = db.subsystems.filter(
-      (s) => s.status === 'active' && tenant.subsystemIds.includes(s.id),
-    );
-    return RESPONSE.success<Subsystem[]>(list);
+    return RESPONSE.success<Subsystem[]>(db.subsystems);
   },
 
   /** 子系统详情 */

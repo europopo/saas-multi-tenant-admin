@@ -2,16 +2,22 @@
 /**
  * 角色管理（RBAC）— 子系统级菜单权限
  * 权限配置按「子系统」分组：每个子系统一套独立菜单/按钮权限树，
- * 分组数据源来自 /subsystem/menus（与子系统动态路由同源，新增子系统自动出现）。
+ * 分组数据源来自 /menu/for-role（与菜单管理同源，新增子系统自动出现）。
  */
-import { ref, reactive, onMounted, nextTick } from 'vue';
+import { ref, reactive, onMounted, nextTick, computed } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import type { Role, PermissionGroup, SubsystemPermission } from '@saas/shared';
+import type { Role, PermissionGroup, SubsystemPermission, MenuItem } from '@saas/shared';
+import { isPlatformMenuItem } from '@saas/shared';
 import { roleApi } from '@/api';
 import { PageHeader, StatusTag } from '@saas/ui';
+import { useAuthStore } from '@/stores/auth';
 
+const auth = useAuthStore();
 const loading = ref(false);
 const list = ref<Role[]>([]);
+
+// 当前用户是否为平台级（租户级用户仅能创建/编辑租户级角色）
+const isPlatformUser = computed(() => auth.user?.scope === 'platform' || auth.isPlatformAdmin);
 
 // 权限数据源（按子系统分组的菜单树）
 const permissionGroups = ref<PermissionGroup[]>([]);
@@ -31,6 +37,25 @@ const form = reactive({
   name: '',
   description: '',
   scope: 'tenant' as Role['scope'],
+});
+
+/**
+ * 权限数据源（含 scope 约束）：
+ * 当角色为「租户级」时，平台级菜单（租户/子系统/用户/角色/菜单管理等）节点禁用，
+ * 无法被勾选 —— 保证租户级角色不会被授予平台级权限。
+ */
+const displayGroups = computed<PermissionGroup[]>(() => {
+  if (form.scope === 'platform') return permissionGroups.value;
+  const markDisabled = (items: MenuItem[]): MenuItem[] =>
+    items.map((m) => ({
+      ...m,
+      disabled: isPlatformMenuItem(m),
+      children: m.children ? markDisabled(m.children) : undefined,
+    }));
+  return permissionGroups.value.map((g) => ({
+    ...g,
+    menus: markDisabled(g.menus),
+  }));
 });
 
 /** 每个子系统分组的已勾选编码集合（含半选父级） */
@@ -64,7 +89,8 @@ function getGroupChecked(code: string): string[] {
 async function load() {
   loading.value = true;
   try {
-    list.value = await roleApi.list().send();
+    // 租户级用户按当前用户做数据隔离（只看到本租户角色）
+    list.value = await roleApi.list(auth.user?.id).send();
   } finally {
     loading.value = false;
   }
@@ -132,11 +158,42 @@ function onCheckChange(code: string) {
   checkedByGroup.value[code] = getGroupChecked(code);
 }
 
+/** 切换权限域：切到「租户级」时清理各分组已勾选的平台级节点 */
+function onScopeChange() {
+  if (form.scope !== 'tenant') return;
+  for (const g of permissionGroups.value) {
+    const platformCodes = new Set(
+      g.menus
+        .flatMap((m) => [m, ...(m.children ?? [])])
+        .filter((n) => isPlatformMenuItem(n))
+        .map((n) => n.code),
+    );
+    if (platformCodes.size === 0) continue;
+    const current = checkedByGroup.value[g.subsystemCode] ?? [];
+    checkedByGroup.value[g.subsystemCode] = current.filter((c) => !platformCodes.has(c));
+    // 同步树勾选态
+    nextTick(() => {
+      treeRefs.value[g.subsystemCode]?.setCheckedKeys(
+        checkedByGroup.value[g.subsystemCode] ?? [],
+      );
+    });
+  }
+}
+
+/** 获取某分组「可勾选」的节点编码（排除 scope 约束下的平台级禁用节点） */
+function getSelectableCodes(code: string): string[] {
+  const group = displayGroups.value.find((g) => g.subsystemCode === code);
+  if (!group) return [];
+  const flatten = (items: MenuItem[]): MenuItem[] =>
+    items.flatMap((m) => [m, ...(m.children ? flatten(m.children) : [])]);
+  return flatten(group.menus)
+    .filter((m) => !m.disabled)
+    .map((m) => m.code);
+}
+
 /** 全选/清空某个分组 */
 function isGroupAllSelected(code: string): boolean {
-  const allCodes = permissionGroups.value
-    .find((g) => g.subsystemCode === code)
-    ?.menus.map((m) => m.code) ?? [];
+  const allCodes = getSelectableCodes(code);
   const current = checkedByGroup.value[code] ?? [];
   return allCodes.length > 0 && allCodes.every((c) => current.includes(c));
 }
@@ -145,9 +202,7 @@ function isGroupAllSelected(code: string): boolean {
 function toggleSelectAll(code: string) {
   const tree = treeRefs.value[code];
   if (!tree) return;
-  const allCodes = permissionGroups.value
-    .find((g) => g.subsystemCode === code)
-    ?.menus.map((m) => m.code) ?? [];
+  const allCodes = getSelectableCodes(code);
   const current = checkedByGroup.value[code] ?? [];
   const isAllSelected = allCodes.length > 0 && allCodes.every((c) => current.includes(c));
   if (isAllSelected) {
@@ -172,6 +227,16 @@ function buildPermissions(): {
   for (const g of permissionGroups.value) {
     const codes = checkedByGroup.value[g.subsystemCode] ?? [];
     if (codes.length === 0) continue;
+    // scope 兜底：租户级角色过滤掉平台级禁用节点的编码
+    const disabledCodes =
+      form.scope === 'tenant'
+        ? new Set(
+            g.menus
+              .flatMap((m) => [m, ...(m.children ?? [])])
+              .filter((n) => isPlatformMenuItem(n))
+              .map((n) => n.code),
+          )
+        : new Set<string>();
     // 该分组内全部按钮码（type === 'button'）
     const buttonCodes = new Set(
       g.menus
@@ -182,6 +247,7 @@ function buildPermissions(): {
     const menu: string[] = [];
     const perm: string[] = [];
     for (const c of codes) {
+      if (disabledCodes.has(c)) continue;
       if (buttonCodes.has(c)) {
         perm.push(c);
         flatPerm.add(c);
@@ -190,6 +256,7 @@ function buildPermissions(): {
         flatMenu.add(c);
       }
     }
+    if (menu.length === 0 && perm.length === 0) continue;
     subsystemPermissions.push({
       subsystemCode: g.subsystemCode,
       menuCodes: menu,
@@ -217,6 +284,8 @@ async function submit() {
         name: form.name,
         description: form.description,
         scope: form.scope,
+        // 平台级角色 tenantId 恒为 null；租户级角色归属当前用户所在租户
+        tenantId: form.scope === 'platform' ? null : (auth.user?.tenantId ?? null),
         menuCodes,
         permissionCodes,
         subsystemPermissions,
@@ -323,8 +392,8 @@ onMounted(async () => {
           <el-input v-model="form.code" :disabled="dialogMode === 'edit'" placeholder="如：tenant_admin" />
         </el-form-item>
         <el-form-item label="权限域">
-          <el-radio-group v-model="form.scope">
-            <el-radio value="platform">平台级</el-radio>
+          <el-radio-group v-model="form.scope" @change="onScopeChange">
+            <el-radio value="platform" :disabled="!isPlatformUser">平台级</el-radio>
             <el-radio value="tenant">租户级</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -333,7 +402,7 @@ onMounted(async () => {
             <!-- 子系统分组 Tab -->
             <el-tabs v-model="activeGroup" class="permission-tabs">
               <el-tab-pane
-                v-for="g in permissionGroups"
+                v-for="g in displayGroups"
                 :key="g.subsystemCode"
                 :label="g.name"
                 :name="g.subsystemCode"
@@ -353,7 +422,7 @@ onMounted(async () => {
                     show-checkbox
                     node-key="code"
                     default-expand-all
-                    :props="{ label: 'name', children: 'children' }"
+                    :props="{ label: 'name', children: 'children', disabled: 'disabled' }"
                     @check="onCheckChange(g.subsystemCode)"
                   >
                     <template #default="{ data }">

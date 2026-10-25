@@ -10,7 +10,6 @@ import type {
   Role,
   Tenant,
   Subsystem,
-  Plan,
   Task,
   ThirdSystem,
   TaskTypeRule,
@@ -21,6 +20,11 @@ import type {
   ActivityRecord,
   SsoProvider,
   MenuItem,
+  SubsystemPermission,
+  DictType,
+  DictData,
+  NoticeMessage,
+  MessageReadState,
 } from '@saas/shared';
 import { generateId, ALL_MENU_SEED } from '@saas/shared';
 
@@ -30,7 +34,6 @@ export interface Database {
   roles: Role[];
   tenants: Tenant[];
   subsystems: Subsystem[];
-  plans: Plan[];
   tasks: Task[];
   thirdSystems: ThirdSystem[];
   taskTypeRules: TaskTypeRule[];
@@ -47,6 +50,16 @@ export interface Database {
   ssoAuthCodes: Map<string, { provider: string; username: string; nickname: string; email: string }>;
   /** 认证 token → 用户 id */
   tokens: Map<string, string>;
+  /** 用户名 → 密码（登录凭据，内置演示账号 + 一键开通租户时动态登记） */
+  credentials: Record<string, string>;
+  /** 字典类型表（纯租户级） */
+  dictTypes: DictType[];
+  /** 字典数据表 */
+  dictData: DictData[];
+  /** 站内信消息本体表 */
+  notices: NoticeMessage[];
+  /** 站内信用户已读状态表（用户 × 消息） */
+  messageReadStates: MessageReadState[];
 }
 
 const now = Date.now();
@@ -59,46 +72,6 @@ function iso(offsetMs = 0): string {
 
 /** 初始化数据库 */
 function initDatabase(): Database {
-  // 套餐
-  const plans: Plan[] = [
-    {
-      id: 'plan-free',
-      name: '免费版',
-      code: 'free',
-      price: 0,
-      billingCycle: 'monthly',
-      description: '适合个人和小团队试用',
-      features: ['1 个租户', '最多 5 个用户', '基础任务管理', '社区支持'],
-      quotas: { maxUsers: 5, maxSubsystems: 1, customDomain: false, auditLog: false },
-      status: 'active',
-      createdAt: iso(-180 * day),
-    },
-    {
-      id: 'plan-pro',
-      name: '专业版',
-      code: 'pro',
-      price: 999,
-      billingCycle: 'monthly',
-      description: '适合成长型团队',
-      features: ['最多 50 个用户', '5 个子系统', '任务看板与报表', '邮件支持'],
-      quotas: { maxUsers: 50, maxSubsystems: 5, customDomain: false, auditLog: true },
-      status: 'active',
-      createdAt: iso(-180 * day),
-    },
-    {
-      id: 'plan-enterprise',
-      name: '企业版',
-      code: 'enterprise',
-      price: 4999,
-      billingCycle: 'monthly',
-      description: '适合大型企业与多团队协作',
-      features: ['不限用户数', '不限子系统', '高级权限与审计', '专属技术支持'],
-      quotas: { maxUsers: -1, maxSubsystems: -1, customDomain: true, auditLog: true },
-      status: 'active',
-      createdAt: iso(-180 * day),
-    },
-  ];
-
   // 子系统
   const subsystems: Subsystem[] = [
     {
@@ -141,7 +114,6 @@ function initDatabase(): Database {
       name: '示例科技有限公司',
       code: 'demo-tech',
       status: 'active',
-      planId: 'plan-pro',
       contact: '张三',
       email: 'admin@demo-tech.com',
       subsystemIds: ['sub-task', 'sub-analytics'],
@@ -154,7 +126,6 @@ function initDatabase(): Database {
       name: 'Alpha 网络',
       code: 'alpha-net',
       status: 'active',
-      planId: 'plan-enterprise',
       contact: '李四',
       email: 'ops@alpha-net.com',
       subsystemIds: ['sub-task', 'sub-analytics', 'sub-im'],
@@ -167,7 +138,6 @@ function initDatabase(): Database {
       name: 'Beta 零售',
       code: 'beta-retail',
       status: 'pending',
-      planId: 'plan-free',
       contact: '王五',
       email: 'owner@beta-retail.com',
       subsystemIds: ['sub-task'],
@@ -180,7 +150,6 @@ function initDatabase(): Database {
       name: 'Gamma 制造',
       code: 'gamma-mfg',
       status: 'disabled',
-      planId: 'plan-pro',
       contact: '赵六',
       email: 'it@gamma-mfg.com',
       subsystemIds: ['sub-task'],
@@ -193,7 +162,6 @@ function initDatabase(): Database {
       name: 'Delta 教育',
       code: 'delta-edu',
       status: 'active',
-      planId: 'plan-pro',
       contact: '孙七',
       email: 'admin@delta-edu.com',
       subsystemIds: ['sub-task'],
@@ -206,7 +174,6 @@ function initDatabase(): Database {
       name: 'Epsilon 医疗',
       code: 'epsilon-med',
       status: 'active',
-      planId: 'plan-enterprise',
       contact: '周八',
       email: 'info@epsilon-med.com',
       subsystemIds: ['sub-task', 'sub-analytics'],
@@ -222,8 +189,9 @@ function initDatabase(): Database {
       id: 'role-platform-admin',
       code: 'platform_admin',
       name: '平台管理员',
-      description: '拥有平台全部权限，可管理租户、子系统、套餐',
+      description: '拥有平台全部权限，可管理租户、子系统',
       scope: 'platform',
+      tenantId: null,
       menuCodes: ['*'],
       permissionCodes: ['*'],
       status: 'active',
@@ -235,7 +203,8 @@ function initDatabase(): Database {
       name: '租户管理员',
       description: '管理租户内用户、角色与资源',
       scope: 'tenant',
-      menuCodes: ['dashboard', 'tenant', 'subsystem', 'user', 'role', 'task'],
+      tenantId: 'tenant-demo',
+      menuCodes: ['dashboard', 'tenant', 'subsystem', 'user', 'role', 'dict', 'notice', 'task'],
       permissionCodes: [
         'tenant:read',
         'tenant:write',
@@ -247,7 +216,7 @@ function initDatabase(): Database {
         'task:*',
       ],
       subsystemPermissions: [
-        { subsystemCode: 'portal', menuCodes: ['dashboard', 'tenant', 'subsystem', 'user', 'role'], permissionCodes: ['tenant:read', 'tenant:write', 'subsystem:read', 'user:read', 'user:write', 'role:read', 'role:write'] },
+        { subsystemCode: 'portal', menuCodes: ['dashboard', 'tenant', 'subsystem', 'user', 'role', 'dict', 'notice'], permissionCodes: ['tenant:read', 'tenant:write', 'subsystem:read', 'user:read', 'user:write', 'role:read', 'role:write'] },
         { subsystemCode: 'task-system', menuCodes: ['task-system:dashboard', 'task-system:list'], permissionCodes: ['task:*'] },
       ],
       status: 'active',
@@ -259,10 +228,11 @@ function initDatabase(): Database {
       name: '租户成员',
       description: '普通成员，可访问被授权的子系统与任务',
       scope: 'tenant',
-      menuCodes: ['dashboard', 'task'],
+      tenantId: 'tenant-demo',
+      menuCodes: ['dashboard', 'notice', 'task'],
       permissionCodes: ['task:read', 'task:write'],
       subsystemPermissions: [
-        { subsystemCode: 'portal', menuCodes: ['dashboard'], permissionCodes: [] },
+        { subsystemCode: 'portal', menuCodes: ['dashboard', 'notice'], permissionCodes: [] },
         { subsystemCode: 'task-system', menuCodes: ['task-system:dashboard', 'task-system:list'], permissionCodes: ['task-system:create', 'task-system:edit'] },
       ],
       status: 'active',
@@ -282,7 +252,7 @@ function initDatabase(): Database {
       roleIds: ['role-platform-admin'],
       roles: ['platform_admin'],
       permissions: ['*'],
-      tenantId: 'tenant-demo',
+      tenantId: null,
       isPlatformAdmin: true,
       createdAt: iso(-160 * day),
       lastLoginAt: iso(-1 * day),
@@ -307,6 +277,8 @@ function initDatabase(): Database {
         'user-list',
         'role',
         'role-list',
+        'dict',
+        'notice',
         // 操作码（按钮级）
         'tenant:read',
         'tenant:write',
@@ -353,6 +325,7 @@ function initDatabase(): Database {
       permissions: [
         // 菜单码
         'dashboard',
+        'notice',
         'task',
         // 操作码
         'task:read',
@@ -681,7 +654,7 @@ function initDatabase(): Database {
     {
       id: generateId('act'),
       type: 'tenant',
-      description: '更新了租户「Alpha 网络」的套餐为企业版',
+      description: '更新了租户「Alpha 网络」的授权子系统',
       operator: '平台管理员',
       timestamp: iso(-2 * day),
     },
@@ -761,12 +734,97 @@ function initDatabase(): Database {
     },
   ];
 
+  // 数据字典（纯租户级种子：示例科技租户的任务优先级 / 任务状态 / 行业类型）
+  const dictTypes: DictType[] = [
+    {
+      id: 'dict-type-priority',
+      name: '任务优先级',
+      type: 'task_priority',
+      status: 'active',
+      tenantId: 'tenant-demo',
+      remark: '任务管理子系统的优先级枚举',
+      createdAt: iso(-100 * day),
+    },
+    {
+      id: 'dict-type-status',
+      name: '任务状态',
+      type: 'task_status',
+      status: 'active',
+      tenantId: 'tenant-demo',
+      remark: '任务生命周期状态',
+      createdAt: iso(-100 * day),
+    },
+    {
+      id: 'dict-type-industry',
+      name: '行业类型',
+      type: 'industry_type',
+      status: 'active',
+      tenantId: 'tenant-demo',
+      remark: '客户所属行业分类',
+      createdAt: iso(-90 * day),
+    },
+  ];
+
+  const dictData: DictData[] = [
+    { id: 'dict-data-p0', typeId: 'dict-type-priority', label: '紧急', value: 'urgent', sort: 1, status: 'active', tenantId: 'tenant-demo', color: 'danger', createdAt: iso(-99 * day) },
+    { id: 'dict-data-p1', typeId: 'dict-type-priority', label: '高', value: 'high', sort: 2, status: 'active', tenantId: 'tenant-demo', color: 'warning', createdAt: iso(-99 * day) },
+    { id: 'dict-data-p2', typeId: 'dict-type-priority', label: '中', value: 'medium', sort: 3, status: 'active', tenantId: 'tenant-demo', color: 'primary', createdAt: iso(-99 * day) },
+    { id: 'dict-data-p3', typeId: 'dict-type-priority', label: '低', value: 'low', sort: 4, status: 'active', tenantId: 'tenant-demo', color: 'info', createdAt: iso(-99 * day) },
+    { id: 'dict-data-s1', typeId: 'dict-type-status', label: '待执行', value: 'pending', sort: 1, status: 'active', tenantId: 'tenant-demo', color: 'info', createdAt: iso(-98 * day) },
+    { id: 'dict-data-s2', typeId: 'dict-type-status', label: '执行中', value: 'running', sort: 2, status: 'active', tenantId: 'tenant-demo', color: 'primary', createdAt: iso(-98 * day) },
+    { id: 'dict-data-s3', typeId: 'dict-type-status', label: '已完成', value: 'success', sort: 3, status: 'active', tenantId: 'tenant-demo', color: 'success', createdAt: iso(-98 * day) },
+    { id: 'dict-data-s4', typeId: 'dict-type-status', label: '已失败', value: 'failed', sort: 4, status: 'active', tenantId: 'tenant-demo', color: 'danger', createdAt: iso(-98 * day) },
+    { id: 'dict-data-i1', typeId: 'dict-type-industry', label: '互联网', value: 'internet', sort: 1, status: 'active', tenantId: 'tenant-demo', createdAt: iso(-89 * day) },
+    { id: 'dict-data-i2', typeId: 'dict-type-industry', label: '制造业', value: 'manufacturing', sort: 2, status: 'active', tenantId: 'tenant-demo', createdAt: iso(-89 * day) },
+    { id: 'dict-data-i3', typeId: 'dict-type-industry', label: '金融', value: 'finance', sort: 3, status: 'active', tenantId: 'tenant-demo', createdAt: iso(-89 * day) },
+  ];
+
+  // 站内信（消息本体种子）
+  const notices: NoticeMessage[] = [
+    {
+      id: 'notice-welcome',
+      title: '欢迎使用 SaaS 平台',
+      content: '欢迎加入 SaaS 多租户管理平台，您可以从仪表盘开始熟悉系统功能。',
+      type: 'system',
+      targetType: 'all',
+      sender: 'system',
+      tenantId: null,
+      createdAt: iso(-5 * day),
+    },
+    {
+      id: 'notice-tenant-expire',
+      title: '租户到期提醒',
+      content: '「Gamma 制造」租户已到期，请及时联系客户续费或停用该租户。',
+      type: 'warning',
+      targetType: 'all',
+      sender: 'system',
+      tenantId: null,
+      createdAt: iso(-2 * day),
+    },
+    {
+      id: 'notice-feature',
+      title: '新功能上线：数据字典',
+      content: '平台新增「数据字典」模块，租户管理员可自行配置业务枚举，无需等待平台下发。',
+      type: 'business',
+      targetType: 'tenant',
+      targetIds: ['tenant-demo'],
+      sender: 'system',
+      tenantId: null,
+      createdAt: iso(-1 * day),
+    },
+  ];
+
+  // 站内信已读状态（演示：管理员已读欢迎通知，其余未读）
+  const messageReadStates: MessageReadState[] = [
+    { id: 'read-1', messageId: 'notice-welcome', userId: 'user-admin', isRead: true, readAt: iso(-4 * day) },
+    { id: 'read-2', messageId: 'notice-welcome', userId: 'user-tenant-admin', isRead: true, readAt: iso(-3 * day) },
+  ];
+
   return {
     users,
     roles,
     tenants,
     subsystems,
-    plans,
     tasks,
     thirdSystems,
     taskTypeRules,
@@ -779,6 +837,15 @@ function initDatabase(): Database {
     menus: [...ALL_MENU_SEED],
     ssoAuthCodes: new Map(),
     tokens: new Map(),
+    credentials: {
+      admin: 'admin123',
+      tenant_admin: 'tenant123',
+      member: 'member123',
+    },
+    dictTypes,
+    dictData,
+    notices,
+    messageReadStates,
   };
 }
 
@@ -789,4 +856,101 @@ export const db: Database = initDatabase();
 export function resetDatabase(): void {
   const fresh = initDatabase();
   Object.assign(db, fresh);
+}
+
+/**
+ * 根据用户的角色，动态聚合其「权限域 scope」与「可访问子系统 accessibleSubsystems」。
+ * 由于 UserInfo.scope / accessibleSubsystems 是运行时派生值，此处统一注入，
+ * 保证登录态、用户列表、角色变更后三处结果一致。
+ */
+export function resolveUserAuth(user: UserInfo): UserInfo {
+  const roles = user.roleIds
+    .map((rid) => db.roles.find((r) => r.id === rid))
+    .filter((r): r is Role => Boolean(r));
+  const isPlatform = roles.some((r) => r.scope === 'platform');
+  const scope: Role['scope'] = isPlatform ? 'platform' : 'tenant';
+  // 平台级：可访问全部子系统；租户级：取角色授权的子系统编码并集
+  let accessibleSubsystems: string[];
+  if (isPlatform) {
+    accessibleSubsystems = db.subsystems.map((s) => s.code);
+  } else {
+    const codes = new Set<string>();
+    for (const r of roles) {
+      for (const sp of r.subsystemPermissions ?? []) {
+        if (sp.subsystemCode) codes.add(sp.subsystemCode);
+      }
+    }
+    accessibleSubsystems = Array.from(codes);
+  }
+  return { ...user, scope, accessibleSubsystems };
+}
+
+/**
+ * 根据「已开通的子系统 id 列表」构建租户管理员（TENANT_ADMIN）角色的权限：
+ * - portal 分组：仅授予 dashboard 通用菜单
+ * - 每个已开通子系统：授予该子系统下的全部菜单/按钮编码
+ * 返回该角色的 menuCodes / permissionCodes / subsystemPermissions。
+ */
+export function buildTenantAdminPermissions(
+  subsystemIds: string[],
+): Pick<Role, 'menuCodes' | 'permissionCodes' | 'subsystemPermissions'> {
+  const subsystemCodes = subsystemIds
+    .map((sid) => db.subsystems.find((s) => s.id === sid)?.code)
+    .filter((c): c is string => Boolean(c));
+
+  const subsystemPermissions: SubsystemPermission[] = [];
+  const menuCodes = new Set<string>();
+  const permissionCodes = new Set<string>();
+
+  // 门户：dashboard 通用菜单 + 「用户与角色」管理菜单（租户管理员默认可管理本租户成员）
+  const portalMenus = db.menus.filter((m) => m.subsystemCode === 'portal');
+  const portalCommonCodes = portalMenus
+    .filter((m) => m.scope === 'common') // dashboard + user/role 管理（scope=common）
+    .map((m) => m.code);
+  const portalMenusList: string[] = [];
+  const portalPermsList: string[] = [];
+  for (const code of portalCommonCodes) {
+    const menu = portalMenus.find((m) => m.code === code);
+    if (!menu) continue;
+    if (menu.type === 'button') {
+      portalPermsList.push(code);
+      permissionCodes.add(code);
+    } else {
+      portalMenusList.push(code);
+      menuCodes.add(code);
+    }
+  }
+  subsystemPermissions.push({
+    subsystemCode: 'portal',
+    menuCodes: portalMenusList,
+    permissionCodes: portalPermsList,
+  });
+
+  // 每个已开通子系统：授予全部菜单码 + 按钮码
+  for (const code of subsystemCodes) {
+    const menus = db.menus.filter((m) => m.subsystemCode === code);
+    if (menus.length === 0) continue;
+    const mcodes: string[] = [];
+    const pcodes: string[] = [];
+    for (const m of menus) {
+      if (m.type === 'button') {
+        pcodes.push(m.code);
+        permissionCodes.add(m.code);
+      } else {
+        mcodes.push(m.code);
+        menuCodes.add(m.code);
+      }
+    }
+    subsystemPermissions.push({
+      subsystemCode: code,
+      menuCodes: mcodes,
+      permissionCodes: pcodes,
+    });
+  }
+
+  return {
+    menuCodes: Array.from(menuCodes),
+    permissionCodes: Array.from(permissionCodes),
+    subsystemPermissions,
+  };
 }

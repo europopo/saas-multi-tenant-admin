@@ -29,6 +29,8 @@ const props = defineProps<{
   tenants?: Tenant[];
   /** 当前租户 id */
   currentTenantId?: string;
+  /** 站内信未读数（0 时不显示角标） */
+  noticeCount?: number;
 }>();
 
 const emit = defineEmits<{
@@ -36,6 +38,9 @@ const emit = defineEmits<{
   (e: 'toggle-tenant'): void;
   (e: 'select-subsystem', subsystem: Subsystem): void;
   (e: 'select-tenant', tenant: Tenant): void;
+  (e: 'open-notice'): void;
+  (e: 'open-profile'): void;
+  (e: 'open-settings'): void;
 }>();
 
 const collapsed = ref(false);
@@ -62,18 +67,10 @@ function selectTenant(t: Tenant) {
   emit('select-tenant', t);
 }
 
-// 主题切换（light/dark，与 portal/task-system 共用，持久化到 localStorage）
-const THEME_KEY = 'saas_theme';
-const isDark = ref(document.documentElement.classList.contains('dark'));
-
-function toggleTheme() {
-  isDark.value = !isDark.value;
-  document.documentElement.classList.toggle('dark', isDark.value);
-  localStorage.setItem(THEME_KEY, isDark.value ? 'dark' : 'light');
-}
-
 function onCommand(command: string) {
   if (command === 'logout') emit('logout');
+  else if (command === 'profile') emit('open-profile');
+  else if (command === 'settings') emit('open-settings');
 }
 </script>
 
@@ -194,15 +191,13 @@ function onCommand(command: string) {
             <el-icon class="mr-1"><component :is="'Switch'" /></el-icon>
             切换租户
           </el-button>
-          <!-- 主题切换 -->
-          <el-tooltip :content="isDark ? '切换到浅色' : '切换到深色'" placement="bottom">
-            <el-button size="small" circle @click="toggleTheme">
-              <el-icon :size="16"><component :is="isDark ? 'Sunny' : 'Moon'" /></el-icon>
-            </el-button>
+          <el-tooltip content="站内信" placement="bottom">
+            <div class="flex items-center justify-center h-6 w-6 cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700 rounded transition-colors" @click="emit('open-notice')">
+              <el-badge :value="noticeCount" :hidden="!noticeCount" :offset="[4, 0]" class="flex items-center justify-center">
+                <el-icon :size="18"><component :is="'Bell'" /></el-icon>
+              </el-badge>
+            </div>
           </el-tooltip>
-          <el-badge :value="3" class="cursor-pointer">
-            <el-icon :size="18"><component :is="'Bell'" /></el-icon>
-          </el-badge>
           <el-dropdown trigger="click" @command="onCommand">
             <div class="flex items-center gap-2 cursor-pointer">
               <el-avatar :size="30" :src="avatar || undefined">{{ initial }}</el-avatar>

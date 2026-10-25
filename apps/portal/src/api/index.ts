@@ -19,6 +19,14 @@ import type {
   SsoLoginParams,
   SsoCallbackParams,
   SsoLoginResult,
+  DictType,
+  DictData,
+  DictTypeQuery,
+  DictDataQuery,
+  DictItem,
+  NoticeMessageView,
+  MessageQuery,
+  MessageSendParams,
 } from '@saas/shared';
 import { alova } from './client';
 
@@ -55,7 +63,7 @@ export const ssoApi = {
 
 /** 租户 API */
 export const tenantApi = {
-  list(query: TenantQuery) {
+  list(query: TenantQuery & { userId?: string }) {
     return alova.Get<PageResult<Tenant>>('/tenant/list', { params: query });
   },
   detail(id: string) {
@@ -77,15 +85,10 @@ export const tenantApi = {
 
 /** 子系统 API */
 export const subsystemApi = {
-  list() {
+  list(userId?: string) {
     // 禁用 GET 缓存：子系统增删改后需即时刷新顶部导航栏
-    return alova.Get<Subsystem[]>('/subsystem/list', { cacheFor: null });
-  },
-  accessible(tenantId: string) {
-    return alova.Get<Subsystem[]>('/subsystem/accessible', {
-      params: { tenantId },
-      cacheFor: null,
-    });
+    // userId 用于按当前用户角色过滤子系统可见性（平台级返回全部）
+    return alova.Get<Subsystem[]>('/subsystem/list', { params: { userId }, cacheFor: null });
   },
   create(data: Partial<Subsystem>) {
     return alova.Post<Subsystem>('/subsystem/create', data);
@@ -100,7 +103,7 @@ export const subsystemApi = {
 
 /** 用户 API */
 export const userApi = {
-  list(query: { keyword?: string; status?: string; page: number; pageSize: number }) {
+  list(query: { keyword?: string; status?: string; userId?: string; page: number; pageSize: number }) {
     return alova.Get<PageResult<UserInfo>>('/user/list', { params: query });
   },
   create(data: Partial<UserInfo>) {
@@ -119,8 +122,8 @@ export const userApi = {
 
 /** 角色 API */
 export const roleApi = {
-  list() {
-    return alova.Get<Role[]>('/role/list');
+  list(userId?: string) {
+    return alova.Get<Role[]>('/role/list', { params: { userId } });
   },
   /** 获取权限数据源（门户 + 各子系统菜单树，按子系统分组） */
   menus() {
@@ -163,5 +166,58 @@ export const menuApi = {
 export const dashboardApi = {
   get() {
     return alova.Get<PortalDashboardData>('/portal/dashboard');
+  },
+};
+
+/** 数据字典 API */
+export const dictApi = {
+  typeList(query: DictTypeQuery & { userId?: string }) {
+    return alova.Get<PageResult<DictType>>('/dict/type/list', { params: query, cacheFor: null });
+  },
+  typeCreate(data: Partial<DictType>) {
+    return alova.Post<DictType>('/dict/type/create', data);
+  },
+  typeUpdate(data: Partial<DictType> & { id: string }) {
+    return alova.Put<DictType>('/dict/type/update', data);
+  },
+  typeRemove(id: string) {
+    return alova.Delete<null>(`/dict/type/${id}`);
+  },
+  dataList(query: DictDataQuery & { userId?: string }) {
+    return alova.Get<DictData[]>('/dict/data/list', { params: query });
+  },
+  dataByType(query: { type: string; tenantId?: string }) {
+    return alova.Get<DictItem[]>('/dict/data/by-type', { params: query });
+  },
+  dataCreate(data: Partial<DictData>) {
+    return alova.Post<DictData>('/dict/data/create', data);
+  },
+  dataUpdate(data: Partial<DictData> & { id: string }) {
+    return alova.Put<DictData>('/dict/data/update', data);
+  },
+  dataRemove(id: string) {
+    return alova.Delete<DictData>(`/dict/data/${id}`);
+  },
+};
+
+/** 站内信 API */
+export const messageApi = {
+  list(query: MessageQuery) {
+    return alova.Get<PageResult<NoticeMessageView>>('/message/list', { params: query, cacheFor: null });
+  },
+  unreadCount(userId: string) {
+    return alova.Get<number>('/message/unread-count', { params: { userId }, cacheFor: null });
+  },
+  read(messageId: string, userId: string) {
+    return alova.Post<null>('/message/read', { messageId, userId });
+  },
+  readAll(userId: string) {
+    return alova.Post<null>('/message/read-all', { userId });
+  },
+  send(data: MessageSendParams) {
+    return alova.Post<NoticeMessageView>('/message/send', data);
+  },
+  remove(id: string, userId?: string) {
+    return alova.Delete<null>(`/message/${id}`, { params: { userId } });
   },
 };

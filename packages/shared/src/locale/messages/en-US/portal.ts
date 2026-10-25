@@ -1,0 +1,67 @@
+/**
+ * 门户专属英文语言包（命名空间 portal）
+ */
+export default {
+  portal: {
+    login: {
+      title: 'SaaS Multi-tenant Admin Platform',
+      subtitle: 'Manage tenants, subsystems and tasks',
+      accountLogin: 'Account Sign in',
+      username: 'Username',
+      password: 'Password',
+      usernamePlaceholder: 'Enter username',
+      passwordPlaceholder: 'Enter password',
+      loginButton: 'Sign in',
+      ssoButton: 'Enterprise SSO',
+      demoAccount: 'Demo account',
+    },
+    layout: {
+      dashboard: 'Dashboard',
+      tenant: 'Tenant',
+      subsystem: 'Subsystem',
+      user: 'Users & Roles',
+      dict: 'Dictionary',
+      notice: 'Notices',
+      system: 'System',
+      menu: 'Menu',
+      logout: 'Sign out',
+      profile: 'Profile',
+      settings: 'Settings',
+      theme: 'Theme',
+    },
+    settings: {
+      title: 'Settings',
+      description: 'Personalize your experience',
+      theme: {
+        title: 'Theme',
+        description: 'Switch between light and dark appearance',
+        light: 'Light',
+        dark: 'Dark',
+      },
+      language: {
+        title: 'Language',
+        description: 'Switch the display language',
+      },
+    },
+    profile: {
+      title: 'Profile',
+      description: 'View and edit your account information',
+      basic: 'Basic Info',
+      username: 'Username',
+      nickname: 'Nickname',
+      email: 'Email',
+      phone: 'Phone',
+      role: 'Roles',
+      tenant: 'Tenant',
+      status: 'Status',
+      createdAt: 'Created At',
+      lastLoginAt: 'Last Login',
+      edit: 'Edit',
+      save: 'Save',
+      nicknamePlaceholder: 'Enter nickname',
+      emailPlaceholder: 'Enter email',
+      phonePlaceholder: 'Enter phone',
+      nicknameRequired: 'Nickname is required',
+    },
+  },
+} as const;

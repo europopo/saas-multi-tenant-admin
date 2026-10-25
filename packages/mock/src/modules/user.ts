@@ -4,18 +4,19 @@
 import { defineMock } from '@alova/mock';
 import type { UserInfo, Role, PageResult, UserStatus } from '@saas/shared';
 import { RESPONSE, BUSINESS_CODE, generateId, paginate } from '@saas/shared';
-import { db } from '../db';
+import { db, resolveUserAuth } from '../db';
 
 /** 用户查询参数 */
 interface UserQuery {
   keyword?: string;
   status?: UserStatus | '';
+  userId?: string;
   page: number;
   pageSize: number;
 }
 
 export default defineMock({
-  /** 用户列表 */
+  /** 用户列表（支持按当前用户做租户数据隔离） */
   '/user/list': ({ query }) => {
     const q = query as unknown as UserQuery & Record<string, string>;
     const keyword = (q.keyword ?? '').trim();
@@ -24,6 +25,19 @@ export default defineMock({
     const pageSize = Number(q.pageSize) || 10;
 
     let list = [...db.users];
+
+    // 权限域数据隔离：租户级用户只返回本租户用户
+    const userId = q.userId;
+    if (userId) {
+      const current = db.users.find((u) => u.id === userId);
+      if (current) {
+        const resolved = resolveUserAuth(current);
+        if (resolved.scope === 'tenant') {
+          list = list.filter((u) => u.tenantId === current.tenantId);
+        }
+      }
+    }
+
     if (keyword) {
       const k = keyword.toLowerCase();
       list = list.filter(
@@ -37,7 +51,7 @@ export default defineMock({
 
     const result = paginate(list, page, pageSize);
     return RESPONSE.success<PageResult<UserInfo>>({
-      list: result.list,
+      list: result.list.map((u) => resolveUserAuth(u)),
       total: result.total,
       page,
       pageSize,
@@ -48,7 +62,7 @@ export default defineMock({
   '/user/{id}': ({ params }) => {
     const user = db.users.find((u) => u.id === params.id);
     if (!user) return RESPONSE.error('用户不存在', BUSINESS_CODE.NOT_FOUND);
-    return RESPONSE.success<UserInfo>(user);
+    return RESPONSE.success<UserInfo>(resolveUserAuth(user));
   },
 
   /** 创建用户 */
@@ -89,7 +103,7 @@ export default defineMock({
       createdAt: new Date().toISOString(),
     };
     db.users.push(user);
-    return RESPONSE.success<UserInfo>(user, '创建成功');
+    return RESPONSE.success<UserInfo>(resolveUserAuth(user), '创建成功');
   },
 
   /** 更新用户 */
@@ -118,7 +132,7 @@ export default defineMock({
       permissions,
       isPlatformAdmin: roles.includes('platform_admin'),
     };
-    return RESPONSE.success<UserInfo>(db.users[idx]!, '更新成功');
+    return RESPONSE.success<UserInfo>(resolveUserAuth(db.users[idx]!), '更新成功');
   },
 
   /** 用户启停 */
@@ -138,8 +152,21 @@ export default defineMock({
     return RESPONSE.success<UserInfo>(removed!, '删除成功');
   },
 
-  /** 角色列表 */
-  '/role/list': () => {
+  /** 角色列表（支持按当前用户做租户数据隔离） */
+  '/role/list': ({ query }) => {
+    const userId = (query as { userId?: string }).userId;
+    if (userId) {
+      const user = db.users.find((u) => u.id === userId);
+      if (user) {
+        const resolved = resolveUserAuth(user);
+        if (resolved.scope === 'tenant') {
+          // 租户级用户只能看到本租户的租户级角色（不含平台级角色）
+          return RESPONSE.success<Role[]>(
+            db.roles.filter((r) => r.tenantId === user.tenantId),
+          );
+        }
+      }
+    }
     return RESPONSE.success<Role[]>(db.roles);
   },
 
@@ -165,6 +192,8 @@ export default defineMock({
       name: body.name,
       description: body.description ?? '',
       scope: body.scope ?? 'tenant',
+      // 平台级角色 tenantId 恒为 null；租户级角色 tenantId 必须归属某租户
+      tenantId: body.scope === 'platform' ? null : (body.tenantId ?? null),
       menuCodes: body.menuCodes ?? [],
       permissionCodes: body.permissionCodes ?? [],
       subsystemPermissions: body.subsystemPermissions ?? [],

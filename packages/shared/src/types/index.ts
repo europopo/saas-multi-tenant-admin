@@ -6,3 +6,5 @@ export * from './auth';
 export * from './tenant';
 export * from './task';
 export * from './dashboard';
+export * from './dict';
+export * from './message';

@@ -6,7 +6,7 @@
  */
 import { ref, reactive, onMounted, computed } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
-import type { MenuItem, MenuItemType, Subsystem } from '@saas/shared';
+import type { MenuItem, MenuItemType, MenuScope, Subsystem } from '@saas/shared';
 import { menuApi, subsystemApi } from '@/api';
 import { PageHeader, StatusTag } from '@saas/ui';
 
@@ -35,6 +35,7 @@ const form = reactive({
   sort: 99,
   visible: true,
   status: 'active' as 'active' | 'disabled',
+  scope: 'common' as MenuScope,
 });
 
 const rules: FormRules = {
@@ -79,6 +80,13 @@ const statusDict = [
   { label: '停用', value: 'disabled', color: 'info' },
 ];
 
+/** 权限域选项 */
+const scopeDict: { label: string; value: MenuScope; color: 'danger' | 'primary' | 'info' }[] = [
+  { label: '平台级', value: 'platform', color: 'danger' },
+  { label: '租户级', value: 'tenant', color: 'primary' },
+  { label: '通用', value: 'common', color: 'info' },
+];
+
 /** 树形表格行样式：按节点类型区分层级视觉（目录/菜单/按钮） */
 function rowClassName({ row }: { row: MenuItem }) {
   return `menu-row--${row.type}`;
@@ -116,6 +124,7 @@ function openCreate(parent?: MenuItem) {
     sort: 99,
     visible: true,
     status: 'active',
+    scope: 'common',
   });
   dialogVisible.value = true;
 }
@@ -134,6 +143,7 @@ function openEdit(row: MenuItem) {
     sort: row.sort,
     visible: row.visible,
     status: row.status,
+    scope: row.scope ?? 'common',
   });
   dialogVisible.value = true;
 }
@@ -263,6 +273,17 @@ onMounted(async () => {
             <StatusTag :dict="statusDict" :value="row.status" />
           </template>
         </el-table-column>
+        <el-table-column label="权限域" width="90" align="center">
+          <template #default="{ row }">
+            <el-tag
+              :type="scopeDict.find((s) => s.value === (row.scope ?? 'common'))?.color"
+              size="small"
+              effect="light"
+            >
+              {{ scopeDict.find((s) => s.value === (row.scope ?? 'common'))?.label }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
             <el-button link type="primary" @click="openCreate(row as MenuItem)">新增下级</el-button>
@@ -285,6 +306,16 @@ onMounted(async () => {
             <el-radio-button value="menu">菜单</el-radio-button>
             <el-radio-button value="button">按钮</el-radio-button>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item label="权限域">
+          <el-radio-group v-model="form.scope">
+            <el-radio-button value="platform">平台级</el-radio-button>
+            <el-radio-button value="tenant">租户级</el-radio-button>
+            <el-radio-button value="common">通用</el-radio-button>
+          </el-radio-group>
+          <div class="text-xs text-gray-400 leading-tight mt-1">
+            平台级菜单仅平台级角色可授权与可见；通用菜单所有角色可见。
+          </div>
         </el-form-item>
         <el-form-item label="菜单名称" prop="name">
           <el-input v-model="form.name" placeholder="如：租户列表" />

@@ -75,6 +75,30 @@ const routes: RouteRecordRaw[] = [
         component: () => import('@/views/system/menu/index.vue'),
         meta: { title: '菜单管理', code: 'system:menu:read' },
       },
+      {
+        path: 'dict',
+        name: 'dict',
+        component: () => import('@/views/dict/index.vue'),
+        meta: { title: '数据字典', code: 'dict' },
+      },
+      {
+        path: 'notice',
+        name: 'notice',
+        component: () => import('@/views/notice/index.vue'),
+        meta: { title: '站内信', code: 'notice' },
+      },
+      {
+        path: 'profile',
+        name: 'profile',
+        component: () => import('@/views/profile/index.vue'),
+        meta: { title: '个人中心' },
+      },
+      {
+        path: 'settings',
+        name: 'settings',
+        component: () => import('@/views/settings/index.vue'),
+        meta: { title: '设置' },
+      },
     ],
   },
   {

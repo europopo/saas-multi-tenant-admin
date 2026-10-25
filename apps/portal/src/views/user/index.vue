@@ -8,7 +8,9 @@ import type { UserInfo, Role } from '@saas/shared';
 import { userApi, roleApi } from '@/api';
 import { PageHeader, StatusTag } from '@saas/ui';
 import { formatDateTime } from '@saas/shared';
+import { useAuthStore } from '@/stores/auth';
 
+const auth = useAuthStore();
 const loading = ref(false);
 const list = ref<UserInfo[]>([]);
 const total = ref(0);
@@ -48,7 +50,8 @@ const statusDict = [
 async function load() {
   loading.value = true;
   try {
-    const result = await userApi.list(query).send();
+    // 租户级用户按当前用户做数据隔离（只看到本租户用户）
+    const result = await userApi.list({ ...query, userId: auth.user?.id }).send();
     list.value = result.list;
     total.value = result.total;
   } finally {
@@ -57,7 +60,8 @@ async function load() {
 }
 
 async function loadRoles() {
-  roles.value = await roleApi.list().send();
+  // 租户级用户只能看到本租户角色
+  roles.value = await roleApi.list(auth.user?.id).send();
 }
 
 function search() {

@@ -32,10 +32,20 @@ export interface UserInfo {
   roles: string[];
   /** 用户拥有的权限编码列表（按钮级 / 页面级） */
   permissions: string[];
-  /** 当前所属租户 id */
-  tenantId: string;
+  /** 当前所属租户 id（平台管理员为 null，不属于任何租户） */
+  tenantId: string | null;
   /** 是否为平台管理员 */
   isPlatformAdmin: boolean;
+  /**
+   * 权限域：由用户角色聚合而来（任一角色为 platform 即视为 platform）。
+   * 决定数据行级隔离与平台级菜单/子系统可见性。
+   */
+  scope?: RoleScope;
+  /**
+   * 可访问的子系统编码列表（由用户角色的 subsystemPermissions 聚合而来）。
+   * 平台级用户拥有全部子系统。
+   */
+  accessibleSubsystems?: string[];
   createdAt: string;
   lastLoginAt?: string;
 }
@@ -132,6 +142,13 @@ export interface Role {
   name: string;
   description?: string;
   scope: RoleScope;
+  /**
+   * 角色所属租户：
+   * - null = 平台级角色（全局，scope 恒为 'platform'）
+   * - 具体值 = 属于该租户的租户级角色（scope 恒为 'tenant'）
+   * 是「角色归属哪个租户」的精确表达，配合 scope 一起做数据行级隔离。
+   */
+  tenantId: string | null;
   /** 关联的菜单权限编码（菜单可见性，运行时扁平化结果） */
   menuCodes: string[];
   /** 关联的操作权限编码（按钮级 / 操作级，运行时扁平化结果） */
@@ -147,6 +164,14 @@ export type MenuItemType = 'dir' | 'menu' | 'button';
 
 /** 菜单状态 */
 export type MenuStatus = 'active' | 'disabled';
+
+/**
+ * 菜单权限域：标识该菜单/权限点属于哪个层级，作为「平台级 vs 租户级」隔离的数据驱动依据。
+ * - platform：平台管理菜单（租户/子系统/用户/角色/菜单管理等），仅平台级角色可授权、可见
+ * - tenant：租户内业务菜单（后续可扩展按租户隔离）
+ * - common：通用菜单（仪表盘等），所有角色可见
+ */
+export type MenuScope = 'platform' | 'tenant' | 'common';
 
 /** 菜单项（完整菜单实体，对齐 ruoyi-vue-pro system_menu 表） */
 export interface MenuItem {
@@ -171,6 +196,11 @@ export interface MenuItem {
   status: MenuStatus;
   /** 所属子系统编码（门户为 'portal'） */
   subsystemCode: string;
+  /**
+   * 菜单权限域：平台级(platform) / 租户级(tenant) / 通用(common)。
+   * 默认 common。是「平台级菜单是否可被租户级角色授权/可见」的数据驱动判定依据。
+   */
+  scope?: MenuScope;
   /** 是否缓存页面 */
   keepAlive?: boolean;
   /** 额外权限标识（兼容 ruoyi，按需） */
@@ -181,6 +211,8 @@ export interface MenuItem {
   order?: number;
   /** 子菜单 */
   children?: MenuItem[];
+  /** 树形展示时是否禁用勾选（用于权限域约束等场景，非持久化字段） */
+  disabled?: boolean;
 }
 
 /** 菜单查询参数 */

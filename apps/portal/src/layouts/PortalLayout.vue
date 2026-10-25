@@ -7,11 +7,11 @@ import { computed, onMounted, onUnmounted, provide, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import { AppLayout } from '@saas/layouts';
-import type { MenuItem, Subsystem, Tenant } from '@saas/shared';
+import { isPlatformMenuItem, type MenuItem, type Subsystem, type Tenant } from '@saas/shared';
 import { useAuthStore } from '@/stores/auth';
 import { useTenantStore } from '@/stores/tenant';
 import { useSubsystemStore } from '@/stores/subsystem';
-import { menuApi, subsystemApi } from '@/api';
+import { menuApi, messageApi } from '@/api';
 
 const auth = useAuthStore();
 const tenantStore = useTenantStore();
@@ -26,24 +26,10 @@ provide(
 
 // 动态菜单：从菜单表拉取门户可见菜单，按权限过滤后构建侧边栏树
 const portalMenus = ref<MenuItem[]>([]);
-const menus = computed<MenuItem[]>(() => {
-  if (auth.isPlatformAdmin) return stripButtons(portalMenus.value);
-  return filterMenusByPermission(portalMenus.value);
-});
+const menus = computed<MenuItem[]>(() => filterMenusByPermission(portalMenus.value));
 
-/** 移除按钮节点（按钮不进侧边栏） */
-function stripButtons(items: MenuItem[]): MenuItem[] {
-  const result: MenuItem[] = [];
-  for (const item of items) {
-    if (item.type === 'button') continue;
-    if (item.children?.length) {
-      result.push({ ...item, children: stripButtons(item.children) });
-    } else {
-      result.push(item);
-    }
-  }
-  return result;
-}
+/** 当前用户权限域（平台级/租户级），用于平台级菜单可见性 */
+const userScope = computed(() => auth.user?.scope ?? (auth.isPlatformAdmin ? 'platform' : 'tenant'));
 
 async function loadMenus() {
   try {
@@ -58,6 +44,8 @@ function filterMenusByPermission(items: MenuItem[]): MenuItem[] {
   for (const item of items) {
     // 按钮不进侧边栏
     if (item.type === 'button') continue;
+    // 权限域约束：平台级菜单仅平台级用户可见（tenant/subscriber 等管理菜单）
+    if (isPlatformMenuItem(item) && userScope.value !== 'platform') continue;
     if (item.children?.length) {
       const children = filterMenusByPermission(item.children);
       if (children.length === 0 && !auth.hasPermission(item.code)) continue;
@@ -75,10 +63,23 @@ function filterMenusByPermission(items: MenuItem[]): MenuItem[] {
 const username = computed(() => auth.user?.nickname ?? '');
 const avatar = computed(() => auth.user?.avatar ?? '');
 
+// 站内信未读数
+const noticeCount = ref(0);
+
+async function loadNoticeCount() {
+  if (!auth.user) return;
+  try {
+    noticeCount.value = await messageApi.unreadCount(auth.user.id).send();
+  } catch {
+    // 忽略未读数加载失败
+  }
+}
+
 onMounted(async () => {
   await tenantStore.loadTenants();
   await subsystemStore.loadSubsystems();
   await loadMenus();
+  await loadNoticeCount();
   // 默认当前租户
   if (!tenantStore.currentTenant && auth.user) {
     const t = tenantStore.allTenants.find((x) => x.id === auth.user!.tenantId);
@@ -94,15 +95,26 @@ onUnmounted(() => {
 });
 
 async function handleLogout() {
+  // 先清空登录态（await 确保本地 token/user 已清除），再跳转，避免时序竞争导致需二次点击
   await auth.logout();
   router.push('/login');
+}
+
+function handleOpenNotice() {
+  router.push('/notice');
+}
+
+function handleOpenProfile() {
+  router.push('/profile');
+}
+
+function handleOpenSettings() {
+  router.push('/settings');
 }
 
 async function handleSelectTenant(tenant: Tenant) {
   tenantStore.setCurrentTenant(tenant);
   ElMessage.success(`已切换到租户「${tenant.name}」`);
-  const accessible = await subsystemApi.accessible(tenant.id).send();
-  console.log('当前租户可访问子系统：', accessible);
 }
 
 /**
@@ -143,9 +155,13 @@ function handleSelectSubsystem(sub: Subsystem) {
     active-subsystem-code="portal"
     :tenants="tenantStore.allTenants"
     :current-tenant-id="tenantStore.currentTenant?.id"
+    :notice-count="noticeCount"
     @logout="handleLogout"
     @select-tenant="handleSelectTenant"
     @select-subsystem="handleSelectSubsystem"
+    @open-notice="handleOpenNotice"
+    @open-profile="handleOpenProfile"
+    @open-settings="handleOpenSettings"
   >
     <router-view />
   </AppLayout>
